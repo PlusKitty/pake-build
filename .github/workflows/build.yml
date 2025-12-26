@@ -46,8 +46,7 @@ jobs:
       - name: Cache npm global packages
         uses: actions/cache@v4
         with:
-          path: ~AppDataRoaming
-pm-cache
+          path: ~/AppData/Local/npm-cache
           key: ${{ runner.os }}-npm-pake
           restore-keys: ${{ runner.os }}-npm-pake
 
