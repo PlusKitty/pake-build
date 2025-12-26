@@ -43,13 +43,19 @@ jobs:
       - name: Install pake-cli
         run: npm install -g pake-cli
 
+      - name: Download icon
+        if: inputs.icon != ''
+        run: |
+          Invoke-WebRequest -Uri "${{ inputs.icon }}" -OutFile "icon.png"
+        shell: pwsh
+
       - name: Build app
         run: |
-          $ICON_ARG = ""
-          if ("${{ inputs.icon }}" -ne "") {
-            $ICON_ARG = "--icon ${{ inputs.icon }}"
+          if (Test-Path "icon.png") {
+            pake "${{ inputs.url }}" --name "${{ inputs.name }}" --icon "icon.png"
+          } else {
+            pake "${{ inputs.url }}" --name "${{ inputs.name }}"
           }
-          pake "${{ inputs.url }}" --name "${{ inputs.name }}" $ICON_ARG
         shell: pwsh
 
       - name: Upload artifact
@@ -74,13 +80,17 @@ jobs:
       - name: Install pake-cli
         run: npm install -g pake-cli
 
+      - name: Download icon
+        if: inputs.icon != ''
+        run: curl -L -o icon.png "${{ inputs.icon }}"
+
       - name: Build app
         run: |
-          ICON_ARG=""
-          if [ -n "${{ inputs.icon }}" ]; then
-            ICON_ARG="--icon ${{ inputs.icon }}"
+          if [ -f "icon.png" ]; then
+            pake "${{ inputs.url }}" --name "${{ inputs.name }}" --icon "icon.png"
+          else
+            pake "${{ inputs.url }}" --name "${{ inputs.name }}"
           fi
-          pake "${{ inputs.url }}" --name "${{ inputs.name }}" $ICON_ARG
         shell: bash
 
       - name: Upload artifact
@@ -110,13 +120,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: Download icon
+        if: inputs.icon != ''
+        run: curl -L -o icon.png "${{ inputs.icon }}"
+
       - name: Build app
         run: |
-          ICON_ARG=""
-          if [ -n "${{ inputs.icon }}" ]; then
-            ICON_ARG="--icon ${{ inputs.icon }}"
+          if [ -f "icon.png" ]; then
+            pake "${{ inputs.url }}" --name "${{ inputs.name }}" --icon "icon.png"
+          else
+            pake "${{ inputs.url }}" --name "${{ inputs.name }}"
           fi
-          pake "${{ inputs.url }}" --name "${{ inputs.name }}" $ICON_ARG
         shell: bash
 
       - name: Upload artifact
