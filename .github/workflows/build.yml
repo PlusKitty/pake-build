@@ -40,6 +40,17 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache npm global packages
+        uses: actions/cache@v4
+        with:
+          path: ~AppDataRoaming
+pm-cache
+          key: ${{ runner.os }}-npm-pake
+          restore-keys: ${{ runner.os }}-npm-pake
+
       - name: Install pake-cli
         run: npm install -g pake-cli
 
@@ -62,7 +73,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.title }}-windows
-          path: "*.exe"
+          path: |
+            *.exe
+            *.msi
+            **/*.msi
+            **/*.exe
           if-no-files-found: warn
 
   build-macos:
@@ -76,6 +91,16 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache npm global packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-pake
+          restore-keys: ${{ runner.os }}-npm-pake
 
       - name: Install pake-cli
         run: npm install -g pake-cli
@@ -97,7 +122,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.title }}-macos
-          path: "*.dmg"
+          path: |
+            *.dmg
+            *.app
+            **/*.dmg
+            **/*.app
           if-no-files-found: warn
 
   build-linux:
@@ -111,6 +140,16 @@ jobs:
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Cache npm global packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-pake
+          restore-keys: ${{ runner.os }}-npm-pake
 
       - name: Install pake-cli
         run: npm install -g pake-cli
@@ -140,4 +179,6 @@ jobs:
           path: |
             *.deb
             *.AppImage
+            **/*.deb
+            **/*.AppImage
           if-no-files-found: warn
