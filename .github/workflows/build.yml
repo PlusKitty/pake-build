@@ -26,6 +26,51 @@ on:
           - windows
           - macos
           - linux
+      width:
+        description: 'Window width'
+        required: false
+        default: ''
+      height:
+        description: 'Window height'
+        required: false
+        default: ''
+      fullscreen:
+        description: 'Start in fullscreen'
+        required: false
+        default: 'false'
+        type: boolean
+      always_on_top:
+        description: 'Always on top'
+        required: false
+        default: 'false'
+        type: boolean
+      hide_title_bar:
+        description: 'Hide title bar'
+        required: false
+        default: 'false'
+        type: boolean
+      show_system_tray:
+        description: 'Show system tray'
+        required: false
+        default: 'false'
+        type: boolean
+      user_agent:
+        description: 'Custom User Agent'
+        required: false
+        default: ''
+      inject_css:
+        description: 'CSS to inject'
+        required: false
+        default: ''
+      inject_js:
+        description: 'JS to inject'
+        required: false
+        default: ''
+      multi_arch:
+        description: 'Build multi-arch (macOS only)'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   build-windows:
@@ -57,12 +102,30 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build app
+        env:
+          INJECT_CSS: ${{ inputs.inject_css }}
+          INJECT_JS: ${{ inputs.inject_js }}
         run: |
-          if (Test-Path "icon.png") {
-            pake "${{ inputs.url }}" --name "${{ inputs.name }}" --icon "icon.png"
-          } else {
-            pake "${{ inputs.url }}" --name "${{ inputs.name }}"
+          $cmd = "pake '${{ inputs.url }}' --name '${{ inputs.name }}'"
+          if (Test-Path "icon.png") { $cmd += " --icon 'icon.png'" }
+          if ("${{ inputs.width }}") { $cmd += " --width ${{ inputs.width }}" }
+          if ("${{ inputs.height }}") { $cmd += " --height ${{ inputs.height }}" }
+          if ("${{ inputs.fullscreen }}" -eq "true") { $cmd += " --fullscreen" }
+          if ("${{ inputs.always_on_top }}" -eq "true") { $cmd += " --always-on-top" }
+          if ("${{ inputs.hide_title_bar }}" -eq "true") { $cmd += " --hide-title-bar" }
+          if ("${{ inputs.show_system_tray }}" -eq "true") { $cmd += " --show-system-tray" }
+          if ("${{ inputs.user_agent }}") { $cmd += " --user-agent '${{ inputs.user_agent }}'" }
+          
+          if ($env:INJECT_CSS) { 
+            Set-Content -Path "inject.css" -Value $env:INJECT_CSS
+            $cmd += " --inject 'inject.css'"
           }
+          if ($env:INJECT_JS) { 
+             Set-Content -Path "inject.js" -Value $env:INJECT_JS
+             $cmd += " --inject 'inject.js'"
+          }
+
+          Invoke-Expression $cmd
         shell: pwsh
 
       - name: Upload artifact
@@ -105,12 +168,31 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build app
+        env:
+          INJECT_CSS: ${{ inputs.inject_css }}
+          INJECT_JS: ${{ inputs.inject_js }}
         run: |
-          if [ -f "icon.png" ]; then
-            pake "${{ inputs.url }}" --name "${{ inputs.name }}" --icon "icon.png"
-          else
-            pake "${{ inputs.url }}" --name "${{ inputs.name }}"
+          CMD="pake "${{ inputs.url }}" --name "${{ inputs.name }}""
+          if [ -f "icon.png" ]; then CMD="$CMD --icon icon.png"; fi
+          if [ -n "${{ inputs.width }}" ]; then CMD="$CMD --width ${{ inputs.width }}"; fi
+          if [ -n "${{ inputs.height }}" ]; then CMD="$CMD --height ${{ inputs.height }}"; fi
+          if [ "${{ inputs.fullscreen }}" == "true" ]; then CMD="$CMD --fullscreen"; fi
+          if [ "${{ inputs.always_on_top }}" == "true" ]; then CMD="$CMD --always-on-top"; fi
+          if [ "${{ inputs.hide_title_bar }}" == "true" ]; then CMD="$CMD --hide-title-bar"; fi
+          if [ "${{ inputs.show_system_tray }}" == "true" ]; then CMD="$CMD --show-system-tray"; fi
+          if [ -n "${{ inputs.user_agent }}" ]; then CMD="$CMD --user-agent "${{ inputs.user_agent }}""; fi
+          if [ "${{ inputs.multi_arch }}" == "true" ]; then CMD="$CMD --multi-arch"; fi
+          
+          if [ -n "$INJECT_CSS" ]; then 
+            echo "$INJECT_CSS" > inject.css
+            CMD="$CMD --inject inject.css"
           fi
+          if [ -n "$INJECT_JS" ]; then 
+            echo "$INJECT_JS" > inject.js
+            CMD="$CMD --inject inject.js"
+          fi
+
+          eval $CMD
         shell: bash
 
       - name: Upload artifact
@@ -158,12 +240,30 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Build app
+        env:
+          INJECT_CSS: ${{ inputs.inject_css }}
+          INJECT_JS: ${{ inputs.inject_js }}
         run: |
-          if [ -f "icon.png" ]; then
-            pake "${{ inputs.url }}" --name "${{ inputs.name }}" --icon "icon.png"
-          else
-            pake "${{ inputs.url }}" --name "${{ inputs.name }}"
+          CMD="pake "${{ inputs.url }}" --name "${{ inputs.name }}""
+          if [ -f "icon.png" ]; then CMD="$CMD --icon icon.png"; fi
+          if [ -n "${{ inputs.width }}" ]; then CMD="$CMD --width ${{ inputs.width }}"; fi
+          if [ -n "${{ inputs.height }}" ]; then CMD="$CMD --height ${{ inputs.height }}"; fi
+          if [ "${{ inputs.fullscreen }}" == "true" ]; then CMD="$CMD --fullscreen"; fi
+          if [ "${{ inputs.always_on_top }}" == "true" ]; then CMD="$CMD --always-on-top"; fi
+          if [ "${{ inputs.hide_title_bar }}" == "true" ]; then CMD="$CMD --hide-title-bar"; fi
+          if [ "${{ inputs.show_system_tray }}" == "true" ]; then CMD="$CMD --show-system-tray"; fi
+          if [ -n "${{ inputs.user_agent }}" ]; then CMD="$CMD --user-agent "${{ inputs.user_agent }}""; fi
+          
+          if [ -n "$INJECT_CSS" ]; then 
+            echo "$INJECT_CSS" > inject.css
+            CMD="$CMD --inject inject.css"
           fi
+          if [ -n "$INJECT_JS" ]; then 
+            echo "$INJECT_JS" > inject.js
+            CMD="$CMD --inject inject.js"
+          fi
+
+          eval $CMD
         shell: bash
 
       - name: Upload artifact
