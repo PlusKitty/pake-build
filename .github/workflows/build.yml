@@ -4,18 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       name:
-        description: 'App name (slug format)'
+        description: 'App name'
         required: true
       title:
-        description: 'App title'
+        description: 'App title/slug'
         required: true
       url:
         description: 'Target URL'
         required: true
-      icon:
-        description: 'Icon URL (optional)'
-        required: false
-        default: ''
       platform:
         description: 'Target platform'
         required: true
@@ -26,228 +22,35 @@ on:
           - windows
           - macos
           - linux
-      width:
-        description: 'Window width'
-        required: false
-        default: ''
-      height:
-        description: 'Window height'
-        required: false
-        default: ''
-      fullscreen:
-        description: 'Start in fullscreen'
-        required: false
-        default: 'false'
-        type: boolean
-      always_on_top:
-        description: 'Always on top'
-        required: false
-        default: 'false'
-        type: boolean
-      hide_title_bar:
-        description: 'Hide title bar'
-        required: false
-        default: 'false'
-        type: boolean
-      show_system_tray:
-        description: 'Show system tray'
-        required: false
-        default: 'false'
-        type: boolean
-      user_agent:
-        description: 'Custom User Agent'
-        required: false
-        default: ''
-      inject_css:
-        description: 'CSS to inject'
-        required: false
-        default: ''
-      inject_js:
-        description: 'JS to inject'
-        required: false
-        default: ''
-      multi_arch:
-        description: 'Build multi-arch (macOS only)'
-        required: false
-        default: 'false'
-        type: boolean
-      zoom:
-        description: 'Initial zoom level (50-200)'
-        required: false
-        default: ''
-      multi_instance:
-        description: 'Allow multiple instances'
-        required: false
-        default: 'false'
-        type: boolean
-      enable_drag_drop:
-        description: 'Enable drag and drop'
-        required: false
-        default: 'false'
-        type: boolean
-      wasm:
-        description: 'Enable WebAssembly support'
-        required: false
-        default: 'false'
-        type: boolean
-      debug:
-        description: 'Enable debug mode'
-        required: false
-        default: 'false'
-        type: boolean
-      ignore_certificate_errors:
-        description: 'Ignore SSL errors'
-        required: false
-        default: 'false'
-        type: boolean
-      app_version:
-        description: 'App version'
-        required: false
-        default: ''
-      window_title:
-        description: 'Window title'
-        required: false
-        default: ''
-      activation_shortcut:
-        description: 'Global activation shortcut'
-        required: false
-        default: ''
-      min_width:
-        description: 'Minimum window width'
-        required: false
-        default: ''
-      min_height:
-        description: 'Minimum window height'
-        required: false
-        default: ''
-      maximize:
-        description: 'Start maximized'
-        required: false
-        default: 'false'
-        type: boolean
-      proxy_url:
-        description: 'Proxy server URL'
-        required: false
-        default: ''
-      incognito:
-        description: 'Incognito mode'
-        required: false
-        default: 'false'
-        type: boolean
-      force_internal_navigation:
-        description: 'Force internal navigation'
-        required: false
-        default: 'false'
-        type: boolean
-      disabled_web_shortcuts:
-        description: 'Disable web shortcuts'
-        required: false
-        default: 'false'
-        type: boolean
-      dark_mode:
-        description: 'Force dark mode (macOS)'
-        required: false
-        default: 'false'
-        type: boolean
-      hide_on_close:
-        description: 'Hide on close'
-        required: false
-        default: 'false'
-        type: boolean
-      start_to_tray:
-        description: 'Start minimized to tray'
-        required: false
-        default: 'false'
-        type: boolean
-      tray_icon:
-        description: 'System tray icon path'
-        required: false
-        default: ''
-      installer_language:
-        description: 'Windows installer language'
-        required: false
-        default: ''
+      json_config:
+        description: 'Full Configuration (JSON)'
+        required: true
+        default: '{}'
 
 jobs:
   build-windows:
     if: inputs.platform == 'windows' || inputs.platform == 'all'
     runs-on: windows-latest
     steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Cache npm global packages
-        uses: actions/cache@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/cache@v4
         with:
           path: ~/AppData/Local/npm-cache
           key: ${{ runner.os }}-npm-pake
           restore-keys: ${{ runner.os }}-npm-pake
-
-      - name: Install pake-cli
-        run: npm install -g pake-cli
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
+      - run: npm install -g pake-cli
+      - uses: actions/checkout@v4
       - name: Build app
         env:
-          INJECT_CSS: ${{ inputs.inject_css }}
-          INJECT_JS: ${{ inputs.inject_js }}
+          JSON_CONFIG: ${{ inputs.json_config }}
         run: |
-          $cmd = "pake '${{ inputs.url }}' --name '${{ inputs.name }}'"
-          # Use local icon.png if uploaded, otherwise pass URL directly to Pake (it supports URLs natively)
-          if (Test-Path "icon.png") { $cmd += " --icon 'icon.png'" }
-          elseif ("${{ inputs.icon }}") { $cmd += " --icon '${{ inputs.icon }}'" }
-          if ("${{ inputs.width }}") { $cmd += " --width ${{ inputs.width }}" }
-          if ("${{ inputs.height }}") { $cmd += " --height ${{ inputs.height }}" }
-          if ("${{ inputs.fullscreen }}" -eq "true") { $cmd += " --fullscreen" }
-          if ("${{ inputs.always_on_top }}" -eq "true") { $cmd += " --always-on-top" }
-          if ("${{ inputs.hide_title_bar }}" -eq "true") { $cmd += " --hide-title-bar" }
-          if ("${{ inputs.show_system_tray }}" -eq "true") { $cmd += " --show-system-tray" }
-          if ("${{ inputs.user_agent }}") { $cmd += " --user-agent '${{ inputs.user_agent }}'" }
-          if ("${{ inputs.zoom }}") { $cmd += " --zoom ${{ inputs.zoom }}" }
-          if ("${{ inputs.multi_instance }}" -eq "true") { $cmd += " --multi-instance" }
-          if ("${{ inputs.enable_drag_drop }}" -eq "true") { $cmd += " --enable-drag-drop" }
-          if ("${{ inputs.wasm }}" -eq "true") { $cmd += " --wasm" }
-          if ("${{ inputs.debug }}" -eq "true") { $cmd += " --debug" }
-          if ("${{ inputs.ignore_certificate_errors }}" -eq "true") { $cmd += " --ignore-certificate-errors" }
-          if ("${{ inputs.app_version }}") { $cmd += " --app-version '${{ inputs.app_version }}'" }
-          if ("${{ inputs.window_title }}") { $cmd += " --title '${{ inputs.window_title }}'" }
-          if ("${{ inputs.activation_shortcut }}") { $cmd += " --activation-shortcut '${{ inputs.activation_shortcut }}'" }
-          if ("${{ inputs.min_width }}") { $cmd += " --min-width ${{ inputs.min_width }}" }
-          if ("${{ inputs.min_height }}") { $cmd += " --min-height ${{ inputs.min_height }}" }
-          if ("${{ inputs.maximize }}" -eq "true") { $cmd += " --maximize" }
-          if ("${{ inputs.proxy_url }}") { $cmd += " --proxy-url '${{ inputs.proxy_url }}'" }
-          if ("${{ inputs.incognito }}" -eq "true") { $cmd += " --incognito" }
-          if ("${{ inputs.force_internal_navigation }}" -eq "true") { $cmd += " --force-internal-navigation" }
-          if ("${{ inputs.disabled_web_shortcuts }}" -eq "true") { $cmd += " --disabled-web-shortcuts" }
-          if ("${{ inputs.hide_on_close }}" -eq "true") { $cmd += " --hide-on-close" }
-          if ("${{ inputs.start_to_tray }}" -eq "true") { $cmd += " --start-to-tray" }
-          if ("${{ inputs.tray_icon }}") { $cmd += " --system-tray-icon '${{ inputs.tray_icon }}'" }
-          if ("${{ inputs.installer_language }}") { $cmd += " --installer-language '${{ inputs.installer_language }}'" }
-          
-          if ($env:INJECT_CSS) { 
-            Set-Content -Path "inject.css" -Value $env:INJECT_CSS
-            $cmd += " --inject 'inject.css'"
-          }
-          if ($env:INJECT_JS) { 
-             Set-Content -Path "inject.js" -Value $env:INJECT_JS
-             $cmd += " --inject 'inject.js'"
-          }
-
-          Invoke-Expression $cmd
-        shell: pwsh
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          echo "CmNvbnN0IHsgZXhlY1N5bmMgfSA9IHJlcXVpcmUoJ2NoaWxkX3Byb2Nlc3MnKTsKY29uc3QgZnMgPSByZXF1aXJlKCdmcycpOwpjb25zdCBwYXRoID0gcmVxdWlyZSgncGF0aCcpOwoKdHJ5IHsKICBjb25zdCBjb25maWcgPSBKU09OLnBhcnNlKHByb2Nlc3MuZW52LkpTT05fQ09ORklHKTsKICAKICAvLyBDb25zdHJ1Y3QgYXJndW1lbnRzCiAgLy8gUGFrZSBleHBlY3RzOiBwYWtlIHVybCAtLW5hbWUgbmFtZSBbb3B0aW9uc10KICBsZXQgY21kID0gYHBha2UgIiR7Y29uZmlnLnVybH0iIC0tbmFtZSAiJHtjb25maWcubmFtZS5yZXBsYWNlKC8iL2csICdcIicpfSJgOwogIAogIC8vIENoZWNrIGZvciBsb2NhbCBpY29uCiAgaWYgKGZzLmV4aXN0c1N5bmMoJ2ljb24ucG5nJykpIHsKICAgIGNtZCArPSAnIC0taWNvbiBpY29uLnBuZyc7CiAgfSBlbHNlIGlmIChjb25maWcuaWNvbikgewogICAgY21kICs9IGAgLS1pY29uICIke2NvbmZpZy5pY29ufSJgOwogIH0KICAKICAvLyBNYXAgc2ltcGxlIHZhbHVlIG9wdGlvbnMKICBjb25zdCB2YWx1ZU9wdGlvbnMgPSB7CiAgICAnd2lkdGgnOiAnLS13aWR0aCcsCiAgICAnaGVpZ2h0JzogJy0taGVpZ2h0JywKICAgICd1c2VyX2FnZW50JzogJy0tdXNlci1hZ2VudCcsCiAgICAnem9vbSc6ICctLXpvb20nLAogICAgJ2FwcF92ZXJzaW9uJzogJy0tYXBwLXZlcnNpb24nLAogICAgJ3dpbmRvd190aXRsZSc6ICctLXRpdGxlJywKICAgICdhY3RpdmF0aW9uX3Nob3J0Y3V0JzogJy0tYWN0aXZhdGlvbi1zaG9ydGN1dCcsCiAgICAnbWluX3dpZHRoJzogJy0tbWluLXdpZHRoJywKICAgICdtaW5faGVpZ2h0JzogJy0tbWluLWhlaWdodCcsCiAgICAncHJveHlfdXJsJzogJy0tcHJveHktdXJsJywKICAgICd0cmF5X2ljb24nOiAnLS1zeXN0ZW0tdHJheS1pY29uJywKICAgICdpbnN0YWxsZXJfbGFuZ3VhZ2UnOiAnLS1pbnN0YWxsZXItbGFuZ3VhZ2UnCiAgfTsKICAKICBmb3IgKGNvbnN0IFtrZXksIGZsYWddIG9mIE9iamVjdC5lbnRyaWVzKHZhbHVlT3B0aW9ucykpIHsKICAgIGlmIChjb25maWdba2V5XSkgewogICAgICBjbWQgKz0gYCAke2ZsYWd9ICIke1N0cmluZyhjb25maWdba2V5XSkucmVwbGFjZSgvIi9nLCAnXCInKX0iYDsKICAgIH0KICB9CiAgCiAgLy8gTWFwIGJvb2xlYW4gb3B0aW9ucwogIGNvbnN0IGJvb2xPcHRpb25zID0gewogICAgJ2Z1bGxzY3JlZW4nOiAnLS1mdWxsc2NyZWVuJywKICAgICdhbHdheXNfb25fdG9wJzogJy0tYWx3YXlzLW9uLXRvcCcsCiAgICAnaGlkZV90aXRsZV9iYXInOiAnLS1oaWRlLXRpdGxlLWJhcicsCiAgICAnc2hvd19zeXN0ZW1fdHJheSc6ICctLXNob3ctc3lzdGVtLXRyYXknLAogICAgJ211bHRpX2FyY2gnOiAnLS1tdWx0aS1hcmNoJywKICAgICdtdWx0aV9pbnN0YW5jZSc6ICctLW11bHRpLWluc3RhbmNlJywKICAgICdlbmFibGVfZHJhZ19kcm9wJzogJy0tZW5hYmxlLWRyYWctZHJvcCcsCiAgICAnd2FzbSc6ICctLXdhc20nLAogICAgJ2RlYnVnJzogJy0tZGVidWcnLAogICAgJ2lnbm9yZV9jZXJ0aWZpY2F0ZV9lcnJvcnMnOiAnLS1pZ25vcmUtY2VydGlmaWNhdGUtZXJyb3JzJywKICAgICdtYXhpbWl6ZSc6ICctLW1heGltaXplJywKICAgICdpbmNvZ25pdG8nOiAnLS1pbmNvZ25pdG8nLAogICAgJ2ZvcmNlX2ludGVybmFsX25hdmlnYXRpb24nOiAnLS1mb3JjZS1pbnRlcm5hbC1uYXZpZ2F0aW9uJywKICAgICdkaXNhYmxlZF93ZWJfc2hvcnRjdXRzJzogJy0tZGlzYWJsZWQtd2ViLXNob3J0Y3V0cycsCiAgICAnZGFya19tb2RlJzogJy0tZGFyay1tb2RlJywKICAgICdoaWRlX29uX2Nsb3NlJzogJy0taGlkZS1vbi1jbG9zZScsCiAgICAnc3RhcnRfdG9fdHJheSc6ICctLXN0YXJ0LXRvLXRyYXknCiAgfTsKICAKICBmb3IgKGNvbnN0IFtrZXksIGZsYWddIG9mIE9iamVjdC5lbnRyaWVzKGJvb2xPcHRpb25zKSkgewogICAgaWYgKGNvbmZpZ1trZXldID09PSB0cnVlIHx8IGNvbmZpZ1trZXldID09PSAndHJ1ZScpIHsKICAgICAgY21kICs9IGAgJHtmbGFnfWA7CiAgICB9CiAgfQogIAogIC8vIEluamVjdCBDU1MvSlMKICBpZiAoY29uZmlnLmluamVjdF9jc3MpIHsKICAgIGZzLndyaXRlRmlsZVN5bmMoJ2luamVjdC5jc3MnLCBjb25maWcuaW5qZWN0X2Nzcyk7CiAgICBjbWQgKz0gJyAtLWluamVjdCBpbmplY3QuY3NzJzsKICB9CiAgaWYgKGNvbmZpZy5pbmplY3RfanMpIHsKICAgIGZzLndyaXRlRmlsZVN5bmMoJ2luamVjdC5qcycsIGNvbmZpZy5pbmplY3RfanMpOwogICAgY21kICs9ICcgLS1pbmplY3QgaW5qZWN0LmpzJzsKICB9CiAgCiAgY29uc29sZS5sb2coJ0V4ZWN1dGluZyBQYWtlIGNvbW1hbmQuLi4nKTsKICAvLyBFeGVjdXRlIHZpYSBzaGVsbCB0byBoYW5kbGUgdGhlIGNvbW1hbmQgc3RyaW5nCiAgZXhlY1N5bmMoY21kLCB7IHN0ZGlvOiAnaW5oZXJpdCcgfSk7CiAgCn0gY2F0Y2ggKGUpIHsKICBjb25zb2xlLmVycm9yKCdCdWlsZCBzY3JpcHQgZmFpbGVkOicsIGUpOwogIHByb2Nlc3MuZXhpdCgxKTsKfQo=" > build_script.js_b64
+          certutil -decode build_script.js_b64 build_script.js
+          node build_script.js
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.title }}-windows
           path: |
@@ -261,82 +64,24 @@ jobs:
     if: inputs.platform == 'macos' || inputs.platform == 'all'
     runs-on: macos-latest
     steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Cache npm global packages
-        uses: actions/cache@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-npm-pake
           restore-keys: ${{ runner.os }}-npm-pake
-
-      - name: Install pake-cli
-        run: npm install -g pake-cli
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
+      - run: npm install -g pake-cli
+      - uses: actions/checkout@v4
       - name: Build app
         env:
-          INJECT_CSS: ${{ inputs.inject_css }}
-          INJECT_JS: ${{ inputs.inject_js }}
+          JSON_CONFIG: ${{ inputs.json_config }}
         run: |
-          CMD="pake "${{ inputs.url }}" --name "${{ inputs.name }}""
-          # Use local icon.png if uploaded, otherwise pass URL directly to Pake (it supports URLs natively)
-          if [ -f "icon.png" ]; then CMD="$CMD --icon icon.png";
-          elif [ -n "${{ inputs.icon }}" ]; then CMD="$CMD --icon "${{ inputs.icon }}""; fi
-          if [ -n "${{ inputs.width }}" ]; then CMD="$CMD --width ${{ inputs.width }}"; fi
-          if [ -n "${{ inputs.height }}" ]; then CMD="$CMD --height ${{ inputs.height }}"; fi
-          if [ "${{ inputs.fullscreen }}" == "true" ]; then CMD="$CMD --fullscreen"; fi
-          if [ "${{ inputs.always_on_top }}" == "true" ]; then CMD="$CMD --always-on-top"; fi
-          if [ "${{ inputs.hide_title_bar }}" == "true" ]; then CMD="$CMD --hide-title-bar"; fi
-          if [ "${{ inputs.show_system_tray }}" == "true" ]; then CMD="$CMD --show-system-tray"; fi
-          if [ -n "${{ inputs.user_agent }}" ]; then CMD="$CMD --user-agent "${{ inputs.user_agent }}""; fi
-          if [ "${{ inputs.multi_arch }}" == "true" ]; then CMD="$CMD --multi-arch"; fi
-          if [ -n "${{ inputs.zoom }}" ]; then CMD="$CMD --zoom ${{ inputs.zoom }}"; fi
-          if [ "${{ inputs.multi_instance }}" == "true" ]; then CMD="$CMD --multi-instance"; fi
-          if [ "${{ inputs.enable_drag_drop }}" == "true" ]; then CMD="$CMD --enable-drag-drop"; fi
-          if [ "${{ inputs.wasm }}" == "true" ]; then CMD="$CMD --wasm"; fi
-          if [ "${{ inputs.debug }}" == "true" ]; then CMD="$CMD --debug"; fi
-          if [ "${{ inputs.ignore_certificate_errors }}" == "true" ]; then CMD="$CMD --ignore-certificate-errors"; fi
-          if [ -n "${{ inputs.app_version }}" ]; then CMD="$CMD --app-version "${{ inputs.app_version }}""; fi
-          if [ -n "${{ inputs.window_title }}" ]; then CMD="$CMD --title "${{ inputs.window_title }}""; fi
-          if [ -n "${{ inputs.activation_shortcut }}" ]; then CMD="$CMD --activation-shortcut "${{ inputs.activation_shortcut }}""; fi
-          if [ -n "${{ inputs.min_width }}" ]; then CMD="$CMD --min-width ${{ inputs.min_width }}"; fi
-          if [ -n "${{ inputs.min_height }}" ]; then CMD="$CMD --min-height ${{ inputs.min_height }}"; fi
-          if [ "${{ inputs.maximize }}" == "true" ]; then CMD="$CMD --maximize"; fi
-          if [ -n "${{ inputs.proxy_url }}" ]; then CMD="$CMD --proxy-url "${{ inputs.proxy_url }}""; fi
-          if [ "${{ inputs.incognito }}" == "true" ]; then CMD="$CMD --incognito"; fi
-          if [ "${{ inputs.force_internal_navigation }}" == "true" ]; then CMD="$CMD --force-internal-navigation"; fi
-          if [ "${{ inputs.disabled_web_shortcuts }}" == "true" ]; then CMD="$CMD --disabled-web-shortcuts"; fi
-          if [ "${{ inputs.dark_mode }}" == "true" ]; then CMD="$CMD --dark-mode"; fi
-          if [ "${{ inputs.hide_on_close }}" == "true" ]; then CMD="$CMD --hide-on-close"; fi
-          if [ "${{ inputs.start_to_tray }}" == "true" ]; then CMD="$CMD --start-to-tray"; fi
-          if [ -n "${{ inputs.tray_icon }}" ]; then CMD="$CMD --system-tray-icon "${{ inputs.tray_icon }}""; fi
-          
-          if [ -n "$INJECT_CSS" ]; then 
-            echo "$INJECT_CSS" > inject.css
-            CMD="$CMD --inject inject.css"
-          fi
-          if [ -n "$INJECT_JS" ]; then 
-            echo "$INJECT_JS" > inject.js
-            CMD="$CMD --inject inject.js"
-          fi
-
-          eval $CMD
-        shell: bash
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          echo "CmNvbnN0IHsgZXhlY1N5bmMgfSA9IHJlcXVpcmUoJ2NoaWxkX3Byb2Nlc3MnKTsKY29uc3QgZnMgPSByZXF1aXJlKCdmcycpOwpjb25zdCBwYXRoID0gcmVxdWlyZSgncGF0aCcpOwoKdHJ5IHsKICBjb25zdCBjb25maWcgPSBKU09OLnBhcnNlKHByb2Nlc3MuZW52LkpTT05fQ09ORklHKTsKICAKICAvLyBDb25zdHJ1Y3QgYXJndW1lbnRzCiAgLy8gUGFrZSBleHBlY3RzOiBwYWtlIHVybCAtLW5hbWUgbmFtZSBbb3B0aW9uc10KICBsZXQgY21kID0gYHBha2UgIiR7Y29uZmlnLnVybH0iIC0tbmFtZSAiJHtjb25maWcubmFtZS5yZXBsYWNlKC8iL2csICdcIicpfSJgOwogIAogIC8vIENoZWNrIGZvciBsb2NhbCBpY29uCiAgaWYgKGZzLmV4aXN0c1N5bmMoJ2ljb24ucG5nJykpIHsKICAgIGNtZCArPSAnIC0taWNvbiBpY29uLnBuZyc7CiAgfSBlbHNlIGlmIChjb25maWcuaWNvbikgewogICAgY21kICs9IGAgLS1pY29uICIke2NvbmZpZy5pY29ufSJgOwogIH0KICAKICAvLyBNYXAgc2ltcGxlIHZhbHVlIG9wdGlvbnMKICBjb25zdCB2YWx1ZU9wdGlvbnMgPSB7CiAgICAnd2lkdGgnOiAnLS13aWR0aCcsCiAgICAnaGVpZ2h0JzogJy0taGVpZ2h0JywKICAgICd1c2VyX2FnZW50JzogJy0tdXNlci1hZ2VudCcsCiAgICAnem9vbSc6ICctLXpvb20nLAogICAgJ2FwcF92ZXJzaW9uJzogJy0tYXBwLXZlcnNpb24nLAogICAgJ3dpbmRvd190aXRsZSc6ICctLXRpdGxlJywKICAgICdhY3RpdmF0aW9uX3Nob3J0Y3V0JzogJy0tYWN0aXZhdGlvbi1zaG9ydGN1dCcsCiAgICAnbWluX3dpZHRoJzogJy0tbWluLXdpZHRoJywKICAgICdtaW5faGVpZ2h0JzogJy0tbWluLWhlaWdodCcsCiAgICAncHJveHlfdXJsJzogJy0tcHJveHktdXJsJywKICAgICd0cmF5X2ljb24nOiAnLS1zeXN0ZW0tdHJheS1pY29uJywKICAgICdpbnN0YWxsZXJfbGFuZ3VhZ2UnOiAnLS1pbnN0YWxsZXItbGFuZ3VhZ2UnCiAgfTsKICAKICBmb3IgKGNvbnN0IFtrZXksIGZsYWddIG9mIE9iamVjdC5lbnRyaWVzKHZhbHVlT3B0aW9ucykpIHsKICAgIGlmIChjb25maWdba2V5XSkgewogICAgICBjbWQgKz0gYCAke2ZsYWd9ICIke1N0cmluZyhjb25maWdba2V5XSkucmVwbGFjZSgvIi9nLCAnXCInKX0iYDsKICAgIH0KICB9CiAgCiAgLy8gTWFwIGJvb2xlYW4gb3B0aW9ucwogIGNvbnN0IGJvb2xPcHRpb25zID0gewogICAgJ2Z1bGxzY3JlZW4nOiAnLS1mdWxsc2NyZWVuJywKICAgICdhbHdheXNfb25fdG9wJzogJy0tYWx3YXlzLW9uLXRvcCcsCiAgICAnaGlkZV90aXRsZV9iYXInOiAnLS1oaWRlLXRpdGxlLWJhcicsCiAgICAnc2hvd19zeXN0ZW1fdHJheSc6ICctLXNob3ctc3lzdGVtLXRyYXknLAogICAgJ211bHRpX2FyY2gnOiAnLS1tdWx0aS1hcmNoJywKICAgICdtdWx0aV9pbnN0YW5jZSc6ICctLW11bHRpLWluc3RhbmNlJywKICAgICdlbmFibGVfZHJhZ19kcm9wJzogJy0tZW5hYmxlLWRyYWctZHJvcCcsCiAgICAnd2FzbSc6ICctLXdhc20nLAogICAgJ2RlYnVnJzogJy0tZGVidWcnLAogICAgJ2lnbm9yZV9jZXJ0aWZpY2F0ZV9lcnJvcnMnOiAnLS1pZ25vcmUtY2VydGlmaWNhdGUtZXJyb3JzJywKICAgICdtYXhpbWl6ZSc6ICctLW1heGltaXplJywKICAgICdpbmNvZ25pdG8nOiAnLS1pbmNvZ25pdG8nLAogICAgJ2ZvcmNlX2ludGVybmFsX25hdmlnYXRpb24nOiAnLS1mb3JjZS1pbnRlcm5hbC1uYXZpZ2F0aW9uJywKICAgICdkaXNhYmxlZF93ZWJfc2hvcnRjdXRzJzogJy0tZGlzYWJsZWQtd2ViLXNob3J0Y3V0cycsCiAgICAnZGFya19tb2RlJzogJy0tZGFyay1tb2RlJywKICAgICdoaWRlX29uX2Nsb3NlJzogJy0taGlkZS1vbi1jbG9zZScsCiAgICAnc3RhcnRfdG9fdHJheSc6ICctLXN0YXJ0LXRvLXRyYXknCiAgfTsKICAKICBmb3IgKGNvbnN0IFtrZXksIGZsYWddIG9mIE9iamVjdC5lbnRyaWVzKGJvb2xPcHRpb25zKSkgewogICAgaWYgKGNvbmZpZ1trZXldID09PSB0cnVlIHx8IGNvbmZpZ1trZXldID09PSAndHJ1ZScpIHsKICAgICAgY21kICs9IGAgJHtmbGFnfWA7CiAgICB9CiAgfQogIAogIC8vIEluamVjdCBDU1MvSlMKICBpZiAoY29uZmlnLmluamVjdF9jc3MpIHsKICAgIGZzLndyaXRlRmlsZVN5bmMoJ2luamVjdC5jc3MnLCBjb25maWcuaW5qZWN0X2Nzcyk7CiAgICBjbWQgKz0gJyAtLWluamVjdCBpbmplY3QuY3NzJzsKICB9CiAgaWYgKGNvbmZpZy5pbmplY3RfanMpIHsKICAgIGZzLndyaXRlRmlsZVN5bmMoJ2luamVjdC5qcycsIGNvbmZpZy5pbmplY3RfanMpOwogICAgY21kICs9ICcgLS1pbmplY3QgaW5qZWN0LmpzJzsKICB9CiAgCiAgY29uc29sZS5sb2coJ0V4ZWN1dGluZyBQYWtlIGNvbW1hbmQuLi4nKTsKICAvLyBFeGVjdXRlIHZpYSBzaGVsbCB0byBoYW5kbGUgdGhlIGNvbW1hbmQgc3RyaW5nCiAgZXhlY1N5bmMoY21kLCB7IHN0ZGlvOiAnaW5oZXJpdCcgfSk7CiAgCn0gY2F0Y2ggKGUpIHsKICBjb25zb2xlLmVycm9yKCdCdWlsZCBzY3JpcHQgZmFpbGVkOicsIGUpOwogIHByb2Nlc3MuZXhpdCgxKTsKfQo=" | base64 -d > build_script.js
+          node build_script.js
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.title }}-macos
           path: |
@@ -350,85 +95,27 @@ jobs:
     if: inputs.platform == 'linux' || inputs.platform == 'all'
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Rust cache
-        uses: Swatinem/rust-cache@v2
-
-      - name: Cache npm global packages
-        uses: actions/cache@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/cache@v4
         with:
           path: ~/.npm
           key: ${{ runner.os }}-npm-pake
           restore-keys: ${{ runner.os }}-npm-pake
-
-      - name: Install pake-cli
-        run: npm install -g pake-cli
-
-      - name: Install Linux dependencies
-        run: |
+      - run: npm install -g pake-cli
+      - run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Build app
         env:
-          INJECT_CSS: ${{ inputs.inject_css }}
-          INJECT_JS: ${{ inputs.inject_js }}
+          JSON_CONFIG: ${{ inputs.json_config }}
         run: |
-          CMD="pake "${{ inputs.url }}" --name "${{ inputs.name }}""
-          # Use local icon.png if uploaded, otherwise pass URL directly to Pake (it supports URLs natively)
-          if [ -f "icon.png" ]; then CMD="$CMD --icon icon.png";
-          elif [ -n "${{ inputs.icon }}" ]; then CMD="$CMD --icon "${{ inputs.icon }}""; fi
-          if [ -n "${{ inputs.width }}" ]; then CMD="$CMD --width ${{ inputs.width }}"; fi
-          if [ -n "${{ inputs.height }}" ]; then CMD="$CMD --height ${{ inputs.height }}"; fi
-          if [ "${{ inputs.fullscreen }}" == "true" ]; then CMD="$CMD --fullscreen"; fi
-          if [ "${{ inputs.always_on_top }}" == "true" ]; then CMD="$CMD --always-on-top"; fi
-          if [ "${{ inputs.hide_title_bar }}" == "true" ]; then CMD="$CMD --hide-title-bar"; fi
-          if [ "${{ inputs.show_system_tray }}" == "true" ]; then CMD="$CMD --show-system-tray"; fi
-          if [ -n "${{ inputs.user_agent }}" ]; then CMD="$CMD --user-agent "${{ inputs.user_agent }}""; fi
-          if [ -n "${{ inputs.zoom }}" ]; then CMD="$CMD --zoom ${{ inputs.zoom }}"; fi
-          if [ "${{ inputs.multi_instance }}" == "true" ]; then CMD="$CMD --multi-instance"; fi
-          if [ "${{ inputs.enable_drag_drop }}" == "true" ]; then CMD="$CMD --enable-drag-drop"; fi
-          if [ "${{ inputs.wasm }}" == "true" ]; then CMD="$CMD --wasm"; fi
-          if [ "${{ inputs.debug }}" == "true" ]; then CMD="$CMD --debug"; fi
-          if [ "${{ inputs.ignore_certificate_errors }}" == "true" ]; then CMD="$CMD --ignore-certificate-errors"; fi
-          if [ -n "${{ inputs.app_version }}" ]; then CMD="$CMD --app-version "${{ inputs.app_version }}""; fi
-          if [ -n "${{ inputs.window_title }}" ]; then CMD="$CMD --title "${{ inputs.window_title }}""; fi
-          if [ -n "${{ inputs.activation_shortcut }}" ]; then CMD="$CMD --activation-shortcut "${{ inputs.activation_shortcut }}""; fi
-          if [ -n "${{ inputs.min_width }}" ]; then CMD="$CMD --min-width ${{ inputs.min_width }}"; fi
-          if [ -n "${{ inputs.min_height }}" ]; then CMD="$CMD --min-height ${{ inputs.min_height }}"; fi
-          if [ "${{ inputs.maximize }}" == "true" ]; then CMD="$CMD --maximize"; fi
-          if [ -n "${{ inputs.proxy_url }}" ]; then CMD="$CMD --proxy-url "${{ inputs.proxy_url }}""; fi
-          if [ "${{ inputs.incognito }}" == "true" ]; then CMD="$CMD --incognito"; fi
-          if [ "${{ inputs.force_internal_navigation }}" == "true" ]; then CMD="$CMD --force-internal-navigation"; fi
-          if [ "${{ inputs.disabled_web_shortcuts }}" == "true" ]; then CMD="$CMD --disabled-web-shortcuts"; fi
-          if [ "${{ inputs.hide_on_close }}" == "true" ]; then CMD="$CMD --hide-on-close"; fi
-          if [ "${{ inputs.start_to_tray }}" == "true" ]; then CMD="$CMD --start-to-tray"; fi
-          if [ -n "${{ inputs.tray_icon }}" ]; then CMD="$CMD --system-tray-icon "${{ inputs.tray_icon }}""; fi
-          
-          if [ -n "$INJECT_CSS" ]; then 
-            echo "$INJECT_CSS" > inject.css
-            CMD="$CMD --inject inject.css"
-          fi
-          if [ -n "$INJECT_JS" ]; then 
-            echo "$INJECT_JS" > inject.js
-            CMD="$CMD --inject inject.js"
-          fi
-
-          eval $CMD
-        shell: bash
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+          echo "CmNvbnN0IHsgZXhlY1N5bmMgfSA9IHJlcXVpcmUoJ2NoaWxkX3Byb2Nlc3MnKTsKY29uc3QgZnMgPSByZXF1aXJlKCdmcycpOwpjb25zdCBwYXRoID0gcmVxdWlyZSgncGF0aCcpOwoKdHJ5IHsKICBjb25zdCBjb25maWcgPSBKU09OLnBhcnNlKHByb2Nlc3MuZW52LkpTT05fQ09ORklHKTsKICAKICAvLyBDb25zdHJ1Y3QgYXJndW1lbnRzCiAgLy8gUGFrZSBleHBlY3RzOiBwYWtlIHVybCAtLW5hbWUgbmFtZSBbb3B0aW9uc10KICBsZXQgY21kID0gYHBha2UgIiR7Y29uZmlnLnVybH0iIC0tbmFtZSAiJHtjb25maWcubmFtZS5yZXBsYWNlKC8iL2csICdcIicpfSJgOwogIAogIC8vIENoZWNrIGZvciBsb2NhbCBpY29uCiAgaWYgKGZzLmV4aXN0c1N5bmMoJ2ljb24ucG5nJykpIHsKICAgIGNtZCArPSAnIC0taWNvbiBpY29uLnBuZyc7CiAgfSBlbHNlIGlmIChjb25maWcuaWNvbikgewogICAgY21kICs9IGAgLS1pY29uICIke2NvbmZpZy5pY29ufSJgOwogIH0KICAKICAvLyBNYXAgc2ltcGxlIHZhbHVlIG9wdGlvbnMKICBjb25zdCB2YWx1ZU9wdGlvbnMgPSB7CiAgICAnd2lkdGgnOiAnLS13aWR0aCcsCiAgICAnaGVpZ2h0JzogJy0taGVpZ2h0JywKICAgICd1c2VyX2FnZW50JzogJy0tdXNlci1hZ2VudCcsCiAgICAnem9vbSc6ICctLXpvb20nLAogICAgJ2FwcF92ZXJzaW9uJzogJy0tYXBwLXZlcnNpb24nLAogICAgJ3dpbmRvd190aXRsZSc6ICctLXRpdGxlJywKICAgICdhY3RpdmF0aW9uX3Nob3J0Y3V0JzogJy0tYWN0aXZhdGlvbi1zaG9ydGN1dCcsCiAgICAnbWluX3dpZHRoJzogJy0tbWluLXdpZHRoJywKICAgICdtaW5faGVpZ2h0JzogJy0tbWluLWhlaWdodCcsCiAgICAncHJveHlfdXJsJzogJy0tcHJveHktdXJsJywKICAgICd0cmF5X2ljb24nOiAnLS1zeXN0ZW0tdHJheS1pY29uJywKICAgICdpbnN0YWxsZXJfbGFuZ3VhZ2UnOiAnLS1pbnN0YWxsZXItbGFuZ3VhZ2UnCiAgfTsKICAKICBmb3IgKGNvbnN0IFtrZXksIGZsYWddIG9mIE9iamVjdC5lbnRyaWVzKHZhbHVlT3B0aW9ucykpIHsKICAgIGlmIChjb25maWdba2V5XSkgewogICAgICBjbWQgKz0gYCAke2ZsYWd9ICIke1N0cmluZyhjb25maWdba2V5XSkucmVwbGFjZSgvIi9nLCAnXCInKX0iYDsKICAgIH0KICB9CiAgCiAgLy8gTWFwIGJvb2xlYW4gb3B0aW9ucwogIGNvbnN0IGJvb2xPcHRpb25zID0gewogICAgJ2Z1bGxzY3JlZW4nOiAnLS1mdWxsc2NyZWVuJywKICAgICdhbHdheXNfb25fdG9wJzogJy0tYWx3YXlzLW9uLXRvcCcsCiAgICAnaGlkZV90aXRsZV9iYXInOiAnLS1oaWRlLXRpdGxlLWJhcicsCiAgICAnc2hvd19zeXN0ZW1fdHJheSc6ICctLXNob3ctc3lzdGVtLXRyYXknLAogICAgJ211bHRpX2FyY2gnOiAnLS1tdWx0aS1hcmNoJywKICAgICdtdWx0aV9pbnN0YW5jZSc6ICctLW11bHRpLWluc3RhbmNlJywKICAgICdlbmFibGVfZHJhZ19kcm9wJzogJy0tZW5hYmxlLWRyYWctZHJvcCcsCiAgICAnd2FzbSc6ICctLXdhc20nLAogICAgJ2RlYnVnJzogJy0tZGVidWcnLAogICAgJ2lnbm9yZV9jZXJ0aWZpY2F0ZV9lcnJvcnMnOiAnLS1pZ25vcmUtY2VydGlmaWNhdGUtZXJyb3JzJywKICAgICdtYXhpbWl6ZSc6ICctLW1heGltaXplJywKICAgICdpbmNvZ25pdG8nOiAnLS1pbmNvZ25pdG8nLAogICAgJ2ZvcmNlX2ludGVybmFsX25hdmlnYXRpb24nOiAnLS1mb3JjZS1pbnRlcm5hbC1uYXZpZ2F0aW9uJywKICAgICdkaXNhYmxlZF93ZWJfc2hvcnRjdXRzJzogJy0tZGlzYWJsZWQtd2ViLXNob3J0Y3V0cycsCiAgICAnZGFya19tb2RlJzogJy0tZGFyay1tb2RlJywKICAgICdoaWRlX29uX2Nsb3NlJzogJy0taGlkZS1vbi1jbG9zZScsCiAgICAnc3RhcnRfdG9fdHJheSc6ICctLXN0YXJ0LXRvLXRyYXknCiAgfTsKICAKICBmb3IgKGNvbnN0IFtrZXksIGZsYWddIG9mIE9iamVjdC5lbnRyaWVzKGJvb2xPcHRpb25zKSkgewogICAgaWYgKGNvbmZpZ1trZXldID09PSB0cnVlIHx8IGNvbmZpZ1trZXldID09PSAndHJ1ZScpIHsKICAgICAgY21kICs9IGAgJHtmbGFnfWA7CiAgICB9CiAgfQogIAogIC8vIEluamVjdCBDU1MvSlMKICBpZiAoY29uZmlnLmluamVjdF9jc3MpIHsKICAgIGZzLndyaXRlRmlsZVN5bmMoJ2luamVjdC5jc3MnLCBjb25maWcuaW5qZWN0X2Nzcyk7CiAgICBjbWQgKz0gJyAtLWluamVjdCBpbmplY3QuY3NzJzsKICB9CiAgaWYgKGNvbmZpZy5pbmplY3RfanMpIHsKICAgIGZzLndyaXRlRmlsZVN5bmMoJ2luamVjdC5qcycsIGNvbmZpZy5pbmplY3RfanMpOwogICAgY21kICs9ICcgLS1pbmplY3QgaW5qZWN0LmpzJzsKICB9CiAgCiAgY29uc29sZS5sb2coJ0V4ZWN1dGluZyBQYWtlIGNvbW1hbmQuLi4nKTsKICAvLyBFeGVjdXRlIHZpYSBzaGVsbCB0byBoYW5kbGUgdGhlIGNvbW1hbmQgc3RyaW5nCiAgZXhlY1N5bmMoY21kLCB7IHN0ZGlvOiAnaW5oZXJpdCcgfSk7CiAgCn0gY2F0Y2ggKGUpIHsKICBjb25zb2xlLmVycm9yKCdCdWlsZCBzY3JpcHQgZmFpbGVkOicsIGUpOwogIHByb2Nlc3MuZXhpdCgxKTsKfQo=" | base64 -d > build_script.js
+          node build_script.js
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.title }}-linux
           path: |
